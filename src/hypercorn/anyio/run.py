@@ -7,6 +7,7 @@ from typing import Awaitable, Callable, Optional
 
 import anyio
 import anyio.abc
+import trio
 
 from .lifespan import Lifespan
 from .statsd import StatsdLogger
