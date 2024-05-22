@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from types import TracebackType
 from typing import Any, Awaitable, Callable, Optional
 
@@ -8,9 +7,6 @@ import trio
 
 from ..config import Config
 from ..typing import AppWrapper, ASGIReceiveCallable, ASGIReceiveEvent, ASGISendEvent, Scope
-
-if sys.version_info < (3, 11):
-    from exceptiongroup import BaseExceptionGroup
 
 
 async def _handle(

@@ -23,9 +23,6 @@ from ..utils import (
     ShutdownError,
 )
 
-if sys.version_info < (3, 11):
-    from exceptiongroup import BaseExceptionGroup
-
 
 async def worker_serve(
     app: AppWrapper,
