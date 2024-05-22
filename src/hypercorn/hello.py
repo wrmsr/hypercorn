@@ -38,9 +38,9 @@ async def hello_app(scope, recv, send):
 def _main():
     cfg = Config()
 
-    backend = 'anyio'
+    # backend = 'anyio'
     # backend = 'asyncio'
-    # backend = 'trio'
+    backend = 'trio'
 
     match backend:
         case 'anyio':

@@ -191,4 +191,13 @@ def anyio_worker(
     if shutdown_event is not None:
         shutdown_trigger = partial(check_multiprocess_shutdown_event, shutdown_event, anyio.sleep)
 
-    anyio.run(partial(worker_serve, app, config, sockets=sockets, shutdown_trigger=shutdown_trigger))
+    anyio.run(
+        partial(
+            worker_serve,
+            app,
+            config,
+            sockets=sockets,
+            shutdown_trigger=shutdown_trigger,
+        ),
+        backend='trio',
+    )
