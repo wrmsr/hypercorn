@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-import trio
+from typing import Any
+
+import anyio
+import anyio.abc
 
 from ..config import Config
 from ..typing import AppWrapper, ASGIReceiveEvent, ASGISendEvent, LifespanScope
@@ -15,15 +18,15 @@ class Lifespan:
     def __init__(self, app: AppWrapper, config: Config) -> None:
         self.app = app
         self.config = config
-        self.startup = trio.Event()
-        self.shutdown = trio.Event()
-        self.app_send_channel, self.app_receive_channel = trio.open_memory_channel(
+        self.startup = anyio.Event()
+        self.shutdown = anyio.Event()
+        self.app_send_channel, self.app_receive_channel = anyio.create_memory_object_stream[bytes](
             config.max_app_queue_size
         )
         self.supported = True
 
     async def handle_lifespan(
-        self, *, task_status: trio._core._run._TaskStatus = trio.TASK_STATUS_IGNORED
+        self, *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
         task_status.started()
         scope: LifespanScope = {

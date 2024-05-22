@@ -49,7 +49,10 @@ def _main():
                 await serve(hello_app, cfg)
 
             import anyio
-            anyio.run(_asyncio_main, backend='trio')
+            anyio.run(
+                _asyncio_main,  # noqa
+                backend='trio',
+            )
 
         case 'asyncio':
             async def _asyncio_main():

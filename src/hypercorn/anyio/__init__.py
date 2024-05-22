@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import Awaitable, Callable, Literal, Optional
+from typing import Any, Awaitable, Callable, Literal, Optional
 
-import trio
+import anyio
 
 from .run import worker_serve
 from ..config import Config
@@ -16,7 +16,7 @@ async def serve(
     config: Config,
     *,
     shutdown_trigger: Optional[Callable[..., Awaitable[None]]] = None,
-    task_status: trio._core._run._TaskStatus = trio.TASK_STATUS_IGNORED,
+    task_status: Any = anyio.TASK_STATUS_IGNORED,
     mode: Optional[Literal["asgi", "wsgi"]] = None,
 ) -> None:
     """Serve an ASGI framework app given the config.

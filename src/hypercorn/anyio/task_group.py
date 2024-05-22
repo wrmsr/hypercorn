@@ -3,7 +3,8 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Any, Awaitable, Callable, Optional
 
-import trio
+import anyio
+import anyio.abc
 
 from ..config import Config
 from ..typing import AppWrapper, ASGIReceiveCallable, ASGIReceiveEvent, ASGISendEvent, Scope
@@ -20,10 +21,10 @@ async def _handle(
 ) -> None:
     try:
         await app(scope, receive, send, sync_spawn, call_soon)
-    except trio.Cancelled:
+    except anyio.get_cancelled_exc_class():
         raise
     except BaseExceptionGroup as error:
-        _, other_errors = error.split(trio.Cancelled)
+        _, other_errors = error.split(anyio.get_cancelled_exc_class())
         if other_errors is not None:
             await config.log.exception("Error in ASGI Framework")
             await send(None)
@@ -37,8 +38,8 @@ async def _handle(
 
 class TaskGroup:
     def __init__(self) -> None:
-        self._nursery: Optional[trio._core._run.Nursery] = None
-        self._nursery_manager: Optional[trio._core._run.NurseryManager] = None
+        self._nursery: Optional[Any] = None
+        self._nursery_manager: Optional[anyio.abc.TaskGroup] = None
 
     async def spawn_app(
         self,
@@ -47,7 +48,7 @@ class TaskGroup:
         scope: Scope,
         send: Callable[[Optional[ASGISendEvent]], Awaitable[None]],
     ) -> Callable[[ASGIReceiveEvent], Awaitable[None]]:
-        app_send_channel, app_receive_channel = trio.open_memory_channel(config.max_app_queue_size)
+        app_send_channel, app_receive_channel = anyio.create_memory_object_stream[bytes](config.max_app_queue_size)
         self._nursery.start_soon(
             _handle,
             app,
@@ -55,8 +56,8 @@ class TaskGroup:
             scope,
             app_receive_channel.receive,
             send,
-            trio.to_thread.run_sync,
-            trio.from_thread.run,
+            None,  # trio.to_thread.run_sync,
+            None,  # trio.from_thread.run,
         )
         return app_send_channel.send
 
@@ -64,7 +65,7 @@ class TaskGroup:
         self._nursery.start_soon(func, *args)
 
     async def __aenter__(self) -> TaskGroup:
-        self._nursery_manager = trio.open_nursery()
+        self._nursery_manager = anyio.create_task_group()
         self._nursery = await self._nursery_manager.__aenter__()
         return self
 
