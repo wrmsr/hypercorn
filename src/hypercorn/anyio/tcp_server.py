@@ -20,7 +20,7 @@ MAX_RECV = 2**16
 
 class TCPServer:
     def __init__(
-        self, app: AppWrapper, config: Config, context: WorkerContext, stream: trio.Stream
+        self, app: AppWrapper, config: Config, context: WorkerContext, stream: trio.abc.Stream
     ) -> None:
         self.app = app
         self.config = config
@@ -40,7 +40,7 @@ class TCPServer:
             try:
                 with trio.fail_after(self.config.ssl_handshake_timeout):
                     await self.stream.do_handshake()
-            except (trio.BrokenResourceError, TimeoutError):
+            except (anyio.BrokenResourceError, TimeoutError):
                 return  # Handshake failed
             alpn_protocol = self.stream.selected_alpn_protocol()
             socket = self.stream.transport_stream.socket
@@ -89,7 +89,7 @@ class TCPServer:
                     with anyio.CancelScope() as cancel_scope:
                         cancel_scope.shield = True
                         await self.stream.send_all(event.data)
-                except (trio.BrokenResourceError, trio.ClosedResourceError):
+                except (anyio.BrokenResourceError, anyio.ClosedResourceError):
                     await self.protocol.handle(Closed())
         elif isinstance(event, Closed):
             await self._close()
@@ -106,8 +106,8 @@ class TCPServer:
                 with anyio.fail_after(self.config.read_timeout or inf):
                     data = await self.stream.receive_some(MAX_RECV)
             except (
-                trio.ClosedResourceError,
-                trio.BrokenResourceError,
+                anyio.ClosedResourceError,
+                anyio.BrokenResourceError,
                 TimeoutError,
             ):
                 break
@@ -121,10 +121,10 @@ class TCPServer:
         try:
             await self.stream.send_eof()
         except (
-            trio.BrokenResourceError,
+            anyio.BrokenResourceError,
             AttributeError,
-            trio.BusyResourceError,
-            trio.ClosedResourceError,
+            anyio.BusyResourceError,
+            anyio.ClosedResourceError,
         ):
             # They're already gone, nothing to do
             # Or it is a SSL stream
