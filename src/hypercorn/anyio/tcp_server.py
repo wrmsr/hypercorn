@@ -8,7 +8,6 @@ from typing import Any, Generator, Optional
 
 import anyio
 import anyio.abc
-import trio
 
 from .task_group import TaskGroup
 from .worker_context import WorkerContext
