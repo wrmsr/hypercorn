@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from multiprocessing.synchronize import Event as EventType
 from random import randint
 from typing import Awaitable, Callable, Optional
 
-import trio
+import anyio
+import anyio.abc
 
 from .lifespan import Lifespan
 from .statsd import StatsdLogger
@@ -30,7 +30,7 @@ async def worker_serve(
     *,
     sockets: Optional[Sockets] = None,
     shutdown_trigger: Optional[Callable[..., Awaitable[None]]] = None,
-    task_status: trio._core._run._TaskStatus = trio.TASK_STATUS_IGNORED,
+    task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     config.set_statsd_logger_class(StatsdLogger)
 
@@ -40,11 +40,11 @@ async def worker_serve(
         max_requests = config.max_requests + randint(0, config.max_requests_jitter)
     context = WorkerContext(max_requests)
 
-    async with trio.open_nursery() as lifespan_nursery:
+    async with anyio.create_task_group() as lifespan_nursery:
         await lifespan_nursery.start(lifespan.handle_lifespan)
         await lifespan.wait_for_startup()
 
-        async with trio.open_nursery() as server_nursery:
+        async with anyio.create_task_group() as server_nursery:
             if sockets is None:
                 sockets = config.create_sockets()
                 for sock in sockets.secure_sockets:
@@ -80,7 +80,7 @@ async def worker_serve(
 
             task_status.started(binds)
             try:
-                async with trio.open_nursery(strict_exception_groups=True) as nursery:
+                async with anyio.create_task_group() as nursery:
                     if shutdown_trigger is not None:
                         nursery.start_soon(raise_shutdown, shutdown_trigger)
                     nursery.start_soon(raise_shutdown, context.terminate.wait)
@@ -94,14 +94,14 @@ async def worker_serve(
                         ),
                     )
 
-                    await trio.sleep_forever()
+                    await anyio.sleep_forever()
             except BaseExceptionGroup as error:
                 _, other_errors = error.split((ShutdownError, KeyboardInterrupt))
                 if other_errors is not None:
                     raise other_errors
             finally:
                 await context.terminated.set()
-                server_nursery.cancel_scope.deadline = trio.current_time() + config.graceful_timeout
+                server_nursery.cancel_scope.deadline = anyio.current_time() + config.graceful_timeout
 
         await lifespan.wait_for_shutdown()
         lifespan_nursery.cancel_scope.cancel()
@@ -119,6 +119,6 @@ def anyio_worker(
 
     shutdown_trigger = None
     if shutdown_event is not None:
-        shutdown_trigger = partial(check_multiprocess_shutdown_event, shutdown_event, trio.sleep)
+        shutdown_trigger = partial(check_multiprocess_shutdown_event, shutdown_event, anyio.sleep)
 
-    trio.run(partial(worker_serve, app, config, sockets=sockets, shutdown_trigger=shutdown_trigger))
+    anyio.run(partial(worker_serve, app, config, sockets=sockets, shutdown_trigger=shutdown_trigger))

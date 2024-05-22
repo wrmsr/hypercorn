@@ -38,8 +38,8 @@ class Lifespan:
                 scope,
                 self.asgi_receive,
                 self.asgi_send,
-                trio.to_thread.run_sync,
-                trio.from_thread.run,
+                None,  # trio.to_thread.run_sync,
+                None,  # trio.from_thread.run,
             )
         except LifespanFailureError:
             # Lifespan failures should crash the server
@@ -68,9 +68,9 @@ class Lifespan:
 
         await self.app_send_channel.send({"type": "lifespan.startup"})
         try:
-            with trio.fail_after(self.config.startup_timeout):
+            with anyio.fail_after(self.config.startup_timeout):
                 await self.startup.wait()
-        except trio.TooSlowError as error:
+        except TimeoutError as error:
             raise LifespanTimeoutError("startup") from error
 
     async def wait_for_shutdown(self) -> None:
@@ -79,9 +79,9 @@ class Lifespan:
 
         await self.app_send_channel.send({"type": "lifespan.shutdown"})
         try:
-            with trio.fail_after(self.config.shutdown_timeout):
+            with anyio.fail_after(self.config.shutdown_timeout):
                 await self.shutdown.wait()
-        except trio.TooSlowError as error:
+        except TimeoutError as error:
             raise LifespanTimeoutError("startup") from error
 
     async def asgi_receive(self) -> ASGIReceiveEvent:

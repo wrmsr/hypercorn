@@ -3,7 +3,8 @@ from __future__ import annotations
 from math import inf
 from typing import Any, Generator, Optional
 
-import trio
+import anyio
+import anyio.abc
 
 from .task_group import TaskGroup
 from .worker_context import WorkerContext
@@ -18,17 +19,17 @@ MAX_RECV = 2**16
 
 class TCPServer:
     def __init__(
-        self, app: AppWrapper, config: Config, context: WorkerContext, stream: trio.abc.Stream
+        self, app: AppWrapper, config: Config, context: WorkerContext, stream: trio.Stream
     ) -> None:
         self.app = app
         self.config = config
         self.context = context
         self.protocol: ProtocolWrapper
-        self.send_lock = trio.Lock()
-        self.idle_lock = trio.Lock()
+        self.send_lock = anyio.Lock()
+        self.idle_lock = anyio.Lock()
         self.stream = stream
 
-        self._idle_handle: Optional[trio.CancelScope] = None
+        self._idle_handle: Optional[anyio.abc.CancelScope] = None
 
     def __await__(self) -> Generator[Any, None, None]:
         return self.run().__await__()
@@ -38,7 +39,7 @@ class TCPServer:
             try:
                 with trio.fail_after(self.config.ssl_handshake_timeout):
                     await self.stream.do_handshake()
-            except (trio.BrokenResourceError, trio.TooSlowError):
+            except (trio.BrokenResourceError, TimeoutError):
                 return  # Handshake failed
             alpn_protocol = self.stream.selected_alpn_protocol()
             socket = self.stream.transport_stream.socket
@@ -84,7 +85,7 @@ class TCPServer:
         if isinstance(event, RawData):
             async with self.send_lock:
                 try:
-                    with trio.CancelScope() as cancel_scope:
+                    with anyio.CancelScope() as cancel_scope:
                         cancel_scope.shield = True
                         await self.stream.send_all(event.data)
                 except (trio.BrokenResourceError, trio.ClosedResourceError):
@@ -101,12 +102,12 @@ class TCPServer:
     async def _read_data(self) -> None:
         while True:
             try:
-                with trio.fail_after(self.config.read_timeout or inf):
+                with anyio.fail_after(self.config.read_timeout or inf):
                     data = await self.stream.receive_some(MAX_RECV)
             except (
                 trio.ClosedResourceError,
                 trio.BrokenResourceError,
-                trio.TooSlowError,
+                TimeoutError,
             ):
                 break
             else:
@@ -146,12 +147,12 @@ class TCPServer:
 
     async def _run_idle(
         self,
-        task_status: trio._core._run._TaskStatus = trio.TASK_STATUS_IGNORED,
+        task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
-        cancel_scope = trio.CancelScope()
+        cancel_scope = anyio.CancelScope()
         task_status.started(cancel_scope)
         with cancel_scope:
-            with trio.move_on_after(self.config.keep_alive_timeout):
+            with anyio.move_on_after(self.config.keep_alive_timeout):
                 await self.context.terminated.wait()
 
             cancel_scope.shield = True

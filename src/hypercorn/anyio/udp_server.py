@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import trio
+import anyio
+import anyio.abc
 
 from .task_group import TaskGroup
 from .worker_context import WorkerContext
@@ -26,7 +27,7 @@ class UDPServer:
         self.socket = trio.socket.from_stdlib_socket(socket)
 
     async def run(
-        self, task_status: trio._core._run._TaskStatus = trio.TASK_STATUS_IGNORED
+        self, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
     ) -> None:
         from ..protocol.quic import QuicProtocol  # h3/Quic is an optional part of Hypercorn
 
