@@ -20,7 +20,7 @@ MAX_RECV = 2**16
 
 class TCPServer:
     def __init__(
-        self, app: AppWrapper, config: Config, context: WorkerContext, stream: trio.abc.Stream
+        self, app: AppWrapper, config: Config, context: WorkerContext, stream: anyio.abc.SocketStream
     ) -> None:
         self.app = app
         self.config = config
@@ -47,7 +47,7 @@ class TCPServer:
             ssl = True
         except AttributeError:  # Not SSL
             alpn_protocol = "http/1.1"
-            socket = self.stream.socket
+            socket = self.stream._raw_socket
             ssl = False
 
         def log_handler(e: Exception) -> None:
@@ -104,7 +104,7 @@ class TCPServer:
         while True:
             try:
                 with anyio.fail_after(self.config.read_timeout or inf):
-                    data = await self.stream.receive_some(MAX_RECV)
+                    data = await self.stream.receive(MAX_RECV)
             except (
                 anyio.ClosedResourceError,
                 anyio.BrokenResourceError,

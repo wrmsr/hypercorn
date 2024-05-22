@@ -69,7 +69,7 @@ async def worker_serve(
                 await config.log.info(f"Running on https://{bind} (CTRL + C to quit)")
 
             for sock in sockets.insecure_sockets:
-                listeners.append(trio.SocketListener(trio.socket.from_stdlib_socket(sock)))
+                listeners.append(anyio._core._eventloop.get_async_backend().create_tcp_listener(sock))
                 bind = repr_socket_addr(sock.family, sock.getsockname())
                 binds.append(f"http://{bind}")
                 await config.log.info(f"Running on http://{bind} (CTRL + C to quit)")
