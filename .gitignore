@@ -15,3 +15,5 @@ dist/
 poetry.lock
 .idea/
 .DS_Store
+
+/.venv
