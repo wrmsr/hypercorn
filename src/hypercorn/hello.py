@@ -38,12 +38,28 @@ async def hello_app(scope, recv, send):
 def _main():
     cfg = Config()
 
-    async def _asyncio_main():
-        from .asyncio import serve
-        await serve(hello_app, cfg)
+    # backend = 'asyncio'
+    backend = 'trio'
 
-    import asyncio
-    asyncio.run(_asyncio_main())
+    match backend:
+        case 'asyncio':
+            async def _asyncio_main():
+                from .asyncio import serve
+                await serve(hello_app, cfg)
+
+            import asyncio
+            asyncio.run(_asyncio_main())
+
+        case 'trio':
+            async def _trio_main():
+                from .trio import serve
+                await serve(hello_app, cfg)
+
+            import trio
+            trio.run(_trio_main)
+
+        case _:
+            raise ValueError(backend)
 
 
 if __name__ == '__main__':
