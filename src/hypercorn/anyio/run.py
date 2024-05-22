@@ -107,7 +107,7 @@ async def worker_serve(
         lifespan_nursery.cancel_scope.cancel()
 
 
-def trio_worker(
+def anyio_worker(
     config: Config, sockets: Optional[Sockets] = None, shutdown_event: Optional[EventType] = None
 ) -> None:
     if sockets is not None:

@@ -38,10 +38,19 @@ async def hello_app(scope, recv, send):
 def _main():
     cfg = Config()
 
+    backend = 'anyio'
     # backend = 'asyncio'
-    backend = 'trio'
+    # backend = 'trio'
 
     match backend:
+        case 'anyio':
+            async def _asyncio_main():
+                from .anyio import serve
+                await serve(hello_app, cfg)
+
+            import anyio
+            anyio.run(_asyncio_main, backend='trio')
+
         case 'asyncio':
             async def _asyncio_main():
                 from .asyncio import serve

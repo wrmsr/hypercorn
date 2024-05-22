@@ -21,7 +21,11 @@ def run(config: Config) -> int:
         write_pid_file(config.pid_path)
 
     worker_func: WorkerFunc
-    if config.worker_class == "asyncio":
+    if config.worker_class == "anyio":
+        from .anyio.run import anyio_worker
+
+        worker_func = anyio_worker
+    elif config.worker_class == "asyncio":
         from .asyncio.run import asyncio_worker
 
         worker_func = asyncio_worker
