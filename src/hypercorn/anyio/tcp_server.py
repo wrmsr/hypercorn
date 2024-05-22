@@ -88,7 +88,7 @@ class TCPServer:
                 try:
                     with anyio.CancelScope() as cancel_scope:
                         cancel_scope.shield = True
-                        await self.stream.send_all(event.data)
+                        await self.stream.send(event.data)
                 except (anyio.BrokenResourceError, anyio.ClosedResourceError):
                     await self.protocol.handle(Closed())
         elif isinstance(event, Closed):
