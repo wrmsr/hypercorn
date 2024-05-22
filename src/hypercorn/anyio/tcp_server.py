@@ -38,7 +38,7 @@ class TCPServer:
     async def run(self) -> None:
         try:
             try:
-                with trio.fail_after(self.config.ssl_handshake_timeout):
+                with anyio.fail_after(self.config.ssl_handshake_timeout):
                     await self.stream.do_handshake()
             except (anyio.BrokenResourceError, TimeoutError):
                 return  # Handshake failed
