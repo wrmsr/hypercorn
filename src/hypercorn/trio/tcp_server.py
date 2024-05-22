@@ -123,7 +123,7 @@ class TCPServer:
             AttributeError,
             trio.BusyResourceError,
             trio.ClosedResourceError,
-        ):
+        ) as e:
             # They're already gone, nothing to do
             # Or it is a SSL stream
             pass

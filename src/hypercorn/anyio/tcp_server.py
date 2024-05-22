@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import errno
+import os
+
 from math import inf
 from typing import Any, Generator, Optional
 
@@ -120,6 +123,9 @@ class TCPServer:
     async def _close(self) -> None:
         try:
             await self.stream.send_eof()
+        except OSError as e:
+            if e.errno != errno.EBADF:
+                raise
         except (
             anyio.BrokenResourceError,
             AttributeError,
